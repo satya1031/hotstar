@@ -3,19 +3,19 @@ pipeline {
 
     stages {
 
-        stage('git checkout') {
+        stage('Git Checkout') {
             steps {
                 git branch: 'main', credentialsId: 'GitCreds', url: 'https://github.com/Subhash-Rokkala/hotstar.git'
             }
         }
 
-        stage('build process') {
+        stage('Build Process') {
             steps {
                 sh 'mvn clean install'
             }
         }
 
-        stage('building custom image') {
+        stage('Docker Build') {
             steps {
                 sh '''
                 docker build -t subhashrokkala/hotstar:${BUILD_NUMBER} .
@@ -42,15 +42,22 @@ pipeline {
 
         stage('Test K8s Connection') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG')]) {
-                sh 'kubectl get nodes'
-             }
-          }
-       }
+                withCredentials([string(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG_CONTENT')]) {
+                    sh '''
+                    echo "$KUBECONFIG_CONTENT" > kubeconfig
+                    export KUBECONFIG=$(pwd)/kubeconfig
+                    kubectl get nodes
+                    '''
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG')]) {
+                withCredentials([string(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG_CONTENT')]) {
                     sh '''
+                    echo "$KUBECONFIG_CONTENT" > kubeconfig
+                    export KUBECONFIG=$(pwd)/kubeconfig
                     kubectl apply -f k8s/deployment.yaml
                     kubectl apply -f k8s/service.yaml
                     '''
