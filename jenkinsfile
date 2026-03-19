@@ -19,6 +19,7 @@ pipeline{
         stage('pushing image to docker hub'){
             steps{
                 sh 'docker push subhashrokkala/hotsar:latest'
+            }
         }
     }
 }
