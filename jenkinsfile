@@ -13,7 +13,10 @@ pipeline{
         }
         stage('building custome image'){
             steps{
-                sh 'docker build -t subhashrokkala/hotstar:latest .'
+                  sh '''
+                    docker build -t subhashrokkala/hotstar:${BUILD_NUMBER} .
+                    docker tag subhashrokkala/hotstar:${BUILD_NUMBER} subhashrokkala/hotstar:latest
+                  '''    
             }
         }
         stage('pushing image to docker hub'){
@@ -30,7 +33,7 @@ pipeline{
         )]) {
             sh '''
             echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            docker push subhashrokkala/hotstar:latest
+            docker push subhashrokkala/hotstar:${BUILD_NUMBER}
             docker logout
             '''
         }
