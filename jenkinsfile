@@ -1,52 +1,61 @@
-pipeline{
+pipeline {
     agent any
-    stages{
-        stage('git checkout'){
-            steps{
-                    checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'GitCreds', url: 'https://github.com/Subhash-Rokkala/hotstar.git']])                
+
+    stages {
+
+        stage('git checkout') {
+            steps {
+                git branch: 'main', credentialsId: 'GitCreds', url: 'https://github.com/Subhash-Rokkala/hotstar.git'
             }
         }
-        stage('build process'){
-            steps{
-            sh 'mvn clean install'
+
+        stage('build process') {
+            steps {
+                sh 'mvn clean install'
             }
         }
-        stage('building custom image'){
-            steps{
-                  sh '''
-                    docker build -t subhashrokkala/hotstar:${BUILD_NUMBER} .
-                    docker tag subhashrokkala/hotstar:${BUILD_NUMBER} subhashrokkala/hotstar:latest
-                  '''    
+
+        stage('building custom image') {
+            steps {
+                sh '''
+                docker build -t subhashrokkala/hotstar:${BUILD_NUMBER} .
+                docker tag subhashrokkala/hotstar:${BUILD_NUMBER} subhashrokkala/hotstar:latest
+                '''
             }
         }
+
         stage('Docker Push') {
             steps {
-            withCredentials([usernamePassword(
-            credentialsId: 'DockerCred',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )]) {
-            sh '''
-            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            docker push subhashrokkala/hotstar:${BUILD_NUMBER}
-            docker logout
-            '''
-        } 
-      }
-       stage('Test K8s Connection') {
-    steps {
-        sh 'kubectl get nodes'
-    }
-} 
-       stage('Deploy to Kubernetes') {
-            steps {
-            withCredentials([file(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG')]) {
-            sh '''
-            kubectl apply -f k8s/Deployment.yml
-            kubectl apply -f k8s/Service.yml
-            '''
+                withCredentials([usernamePassword(
+                    credentialsId: 'DockerCred',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    docker push subhashrokkala/hotstar:${BUILD_NUMBER}
+                    docker logout
+                    '''
+                }
+            }
         }
+
+        stage('Test K8s Connection') {
+            steps {
+                sh 'kubectl get nodes'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG')]) {
+                    sh '''
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                    '''
+                }
+            }
+        }
+
     }
-}
-  }
 }
