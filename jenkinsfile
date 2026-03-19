@@ -31,8 +31,17 @@ pipeline{
             docker push subhashrokkala/hotstar:${BUILD_NUMBER}
             docker logout
             '''
+        } 
+      }
+       stage('Deploy to Kubernetes') {
+            steps {
+            withCredentials([file(credentialsId: 'kubeconfig-hotstar', variable: 'KUBECONFIG')]) {
+            sh '''
+            kubectl apply -f k8s/Deployment.yml
+            kubectl apply -f k8s/Service.yml
+            '''
         }
     }
 }
-    }
+  }
 }
