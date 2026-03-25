@@ -1,22 +1,29 @@
 pipeline {
     agent any
 
+    environment {
+        FAILED_STAGE = ""
+    }
+
     stages {
 
         stage('Git Checkout') {
             steps {
+                script { FAILED_STAGE = "Git Checkout" }
                 git branch: 'main', credentialsId: 'GitCreds', url: 'https://github.com/Subhash-Rokkala/hotstar.git'
             }
         }
 
         stage('Build Process') {
             steps {
+                script { FAILED_STAGE = "Build Process" }
                 sh 'mvn clean install'
             }
         }
 
         stage('Docker Build') {
             steps {
+                script { FAILED_STAGE = "Docker Build" }
                 sh '''
                 docker build -t subhashrokkala/hotstar:${BUILD_NUMBER} .
                 docker tag subhashrokkala/hotstar:${BUILD_NUMBER} subhashrokkala/hotstar:latest
@@ -26,6 +33,7 @@ pipeline {
 
         stage('Docker Push') {
             steps {
+                script { FAILED_STAGE = "Docker Push" }
                 withCredentials([usernamePassword(
                     credentialsId: 'DockerCred',
                     usernameVariable: 'DOCKER_USER',
@@ -43,6 +51,7 @@ pipeline {
 
         stage('Test K8s Connection') {
             steps {
+                script { FAILED_STAGE = "Test K8s Connection" }
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     sh 'kubectl get nodes'
                 }
@@ -51,6 +60,7 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
+                script { FAILED_STAGE = "Deploy to Kubernetes" }
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
                     sh '''
                     kubectl apply -f k8s/Deployment.yml
@@ -59,8 +69,8 @@ pipeline {
                 }
             }
         }
-
     }
+
     post {
         success {
             emailext (
@@ -76,7 +86,7 @@ pipeline {
                 body: """
                 Build Failed ❌
 
-                Failed Stage: ${env.STAGE_NAME}
+                Failed Stage: ${FAILED_STAGE}
                 Job: ${JOB_NAME}
                 Build: ${BUILD_NUMBER}
 
