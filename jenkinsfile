@@ -61,4 +61,29 @@ pipeline {
         }
 
     }
+    post {
+        success {
+            emailext (
+                subject: "✅ SUCCESS: ${JOB_NAME}",
+                body: "All stages passed successfully.\nBuild URL: ${BUILD_URL}",
+                to: "your_email@gmail.com"
+            )
+        }
+
+        failure {
+            emailext (
+                subject: "❌ FAILED: ${JOB_NAME}",
+                body: """
+                Build Failed ❌
+
+                Failed Stage: ${env.STAGE_NAME}
+                Job: ${JOB_NAME}
+                Build: ${BUILD_NUMBER}
+
+                Check here: ${BUILD_URL}
+                """,
+                to: "your_email@gmail.com"
+            )
+        }
+    }
 }
